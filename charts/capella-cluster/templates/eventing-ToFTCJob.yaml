@@ -1,0 +1,97 @@
+{{- if .Values.optionalInstall.enableEventing }}
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eventing-secret-reader
+  namespace: argo-events
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: eventing-secret-reader-role
+  namespace: argo-events
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eventing-secret-reader-role-binding
+  namespace: argo-events
+subjects:
+  - kind: ServiceAccount
+    name: eventing-secret-reader
+    namespace: argo-events
+roleRef:
+  kind: Role
+  name: eventing-secret-reader-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-event-to-ftc-job
+  namespace: argo-events
+spec:
+  ports:
+  - name: apiport
+    port: 8914
+    protocol: TCP
+    targetPort: 8914
+  selector:
+    app: event-to-ftc-job
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: evt-capella-cambriacluster-api
+  namespace: argo-events
+type: Opaque
+data:
+  token: {{ .Values.secrets.cambriaClusterAPIToken | b64enc  }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-to-ftc-job
+  namespace: argo-events
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: event-to-ftc-job
+  template:
+    metadata:
+      labels:
+        app: event-to-ftc-job
+    spec:
+      serviceAccountName: eventing-secret-reader
+      containers:
+        - name: event-to-ftc-job
+          image: public.ecr.aws/s2v4r0j5/tools:cpeventtoftcjob_1.0.0.14045
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+              - all
+          ports:
+            - containerPort: 8914    
+          env:
+            - name: cpCambriaClusterToken
+              valueFrom:
+                secretKeyRef:       
+                  name: evt-capella-cambriacluster-api
+                  key: token
+{{- end }}

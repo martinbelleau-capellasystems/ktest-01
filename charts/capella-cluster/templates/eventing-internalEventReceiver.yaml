@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: webhook-event-out
+  namespace: argo-events
+spec:
+  service:
+    ports:
+      - port: 13500
+        targetPort: 13500
+  webhook:
+    new-internal-event:
+      port: "13500"
+      endpoint: /internal-event
+      method: POST    
+

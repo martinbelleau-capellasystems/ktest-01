@@ -1,0 +1,219 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cambriaclusterservice
+spec:
+  type: LoadBalancer
+  selector:
+    app: cambriaclusterapp
+  ports: 
+    - name: apicluster
+      port: 8650
+      targetPort: 8650
+    - name: webui
+      port: 8161
+      targetPort: 8161
+    - name: license
+      port: 8678
+      targetPort: 8678
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cambriaclusterapp
+spec:
+  replicas: {{ required "postgresql database replicas required" .Values.cambriaClusterReplicas  }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cambriaclusterapp
+  template:
+    metadata:
+      labels:
+        app: cambriaclusterapp
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - cambriaftcapp
+                      - cambriaclusterapp
+              topologyKey: kubernetes.io/hostname
+
+      nodeSelector:
+        node.kubernetes.io/instance-type: {{ required "manager node affinity instance-type required" .Values.managerInstanceType | quote }}
+
+      containers:
+        - name: cambriaclusterapp
+          image: {{ .Values.image.cambriacluster }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+              - all
+          ports:
+            - containerPort: 8648
+            - containerPort: 8650
+            - containerPort: 8161
+            - containerPort: 8678
+            - containerPort: 8331
+          env:
+            - name: LicenseMode
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-ftc-license
+                  key: mode
+            - name: LicenseKey
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-ftc-license
+                  key: key
+            - name: cpCambriaClusterToken
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-cambriacluster-api
+                  key: token
+            - name: cpCloudSafe
+              value: "1" 
+            - name: cpStartAsLeader
+              value: "0" 
+            - name: cpPostgresHost
+              value: "pgcluster-capella-rw"
+            - name: cpPostgresUser
+              valueFrom:
+                secretKeyRef:       
+                  name: pgcluster-capella-app-user
+                  key: username
+            - name: cpPostgresPassword
+              valueFrom:
+                secretKeyRef:       
+                  name: pgcluster-capella-app-user
+                  key: password
+            - name: cpPostgresPort
+              value: "5432"
+            - name: cpWebUIUsers
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-webui
+                  key: userstring
+
+        - name: cambriaftautoscale
+          image: {{ .Values.image.cpk8autoscaleftc }}
+          resources:
+            requests:
+              memory: "128Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+              - all
+          ports:
+            - containerPort: 8329
+          env:
+            - name: cpLinodeMachineType
+              value: {{ required "instance-type for FTC nodes required" .Values.ftcInstanceType | quote }}
+            - name: cpLinodeToken
+              valueFrom:
+                secretKeyRef:       
+                  name: linode-api
+                  key: token
+            - name: cpCambriaClusterToken
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-cambriacluster-api
+                  key: token
+            - name: maxFTCInstances
+              value: {{ .Values.maxFTCInstances | quote }}
+
+        - name: cambrialeaderelector
+          image: {{ .Values.image.cpleaderelector }}
+          resources:
+            requests:
+              memory: "128Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+              - all
+          env:
+            - name: CpLeaseName
+              value: "capella-cambria-cluster-lease"
+            - name: CpElectionPutInfoCSV
+              value: "http://localhost:8329/Leader,http://localhost:8331/EnvVar"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: myrole
+  namespace: default
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - nodes
+  - deployments
+  - leases
+  verbs:
+  - list
+  - get
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: role-binding
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: myrole
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: myclusterrole
+  namespace: default
+rules:
+- apiGroups:
+  - "*"
+  resources: ["deployments", "pods", "nodes", "services", "replicasets", "leases"]
+  verbs: ["get", "list", "patch", "create", "delete", "update", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: role-binding
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: myclusterrole
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: default

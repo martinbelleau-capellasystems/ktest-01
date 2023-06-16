@@ -1,0 +1,111 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cambriaftcapp
+spec:
+  selector:
+    matchLabels:
+      app: cambriaftcapp
+  replicas: {{ required "max FTC replicas required" .Values.maxFTCInstances  }}
+  template:
+    metadata:
+      labels:
+        app: cambriaftcapp
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - cambriaftcapp
+                      - cambriaclusterapp
+              topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: NotIn
+                values:
+                - {{ required "manager node affinity instance-type required" .Values.managerInstanceType | quote }}
+      containers:
+        - name: cambriaftcapp
+          image: {{ .Values.image.cambriaftc }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+              - all
+          ports:
+            - containerPort: 8648
+            - containerPort: 8161
+            - containerPort: 8678
+          env:
+            - name: LicenseMode
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-ftc-license
+                  key: mode
+            - name: LicenseKey
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-ftc-license
+                  key: key
+            - name: cpPostgresUser
+              value: "postgres" 
+            - name: cpPostgresHost
+              value: "localhost" 
+            - name: cpPostgresPassword
+              value: "g7Uo11mWfEE"
+            - name: cpWebUIUsers
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-webui
+                  key: userstring
+
+        - name: cambriaftcconnect
+          image: {{ .Values.image.ftcconnect }}
+          resources:
+            requests:
+              memory: "128Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+              - all
+          env:
+            - name: cpCambriaClusterToken
+              valueFrom:
+                secretKeyRef:       
+                  name: capella-cambriacluster-api
+                  key: token
+
+        - name: mypg
+          image: {{ .Values.image.postgres }}
+          ports:
+            - containerPort: 5432
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 999
+            runAsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+              - all
+          env:
+            - name: POSTGRES_PASSWORD
+              value: "g7Uo11mWfEE"
+
