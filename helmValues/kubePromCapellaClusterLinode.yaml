@@ -1,0 +1,23 @@
+grafana:
+  adminPassword: prom-capellaPsw	# MODIFY THIS
+
+prometheus:
+  prometheusSpec:
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: linode-block-storage-retain
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+    additionalScrapeConfigs:
+      - job_name: 'additional-target'
+        metrics_path: '/CambriaFC/v1/Metrics'
+        scheme: 'https'
+        tls_config:
+          insecure_skip_verify: true
+        static_configs:
+          - targets:
+              - 'cambriaclusterservice.default:8650'
