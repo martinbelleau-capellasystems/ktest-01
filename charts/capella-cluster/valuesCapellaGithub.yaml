@@ -1,0 +1,45 @@
+# Default values for capella-cluster.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# managerInstanceType: database and Cambria Cluster will be restricted to run on nodes of this instance type.  FTC will be forbidden to run on these
+managerInstanceType: "g6-dedicated-2"
+
+# ftcInstanceType: instance type for the FTC nodes which will be launched dynamically
+ftcInstanceType: "g6-dedicated-8"
+
+# maxFTCInstances: maximum number of FTC instances (ie replicas).  Set this to the number of FTCs that are licensed.
+maxFTCInstances: 3
+
+# pgInstances: number of postgresql database instances (ie replicas)
+pgInstances: 3
+
+# cambriaClusterReplicas: number of Cambria Cluster instances (ie replicas)
+cambriaClusterReplicas: 3
+
+image:
+  cambriacluster: public.ecr.aws/s2v4r0j5/cambriacluster:dev_5.2.0.14143
+  cambriaftc: public.ecr.aws/s2v4r0j5/cambriaftc:dev_5.2.0.14143
+
+secrets:
+  # pgClusterPassword: password for the postgresql database
+  pgClusterPassword: "TxVeQ4nN82SSiYHoswqOURZvQDaL4KpNElsCEEe9bwDxMd73KckIeXzS5cU6LiC2"
+  # pgClusterUsername: username for the postgresql database
+  pgClusterUsername: "app"
+
+  # ftcLicenseMode: FTC license mode
+  ftcLicenseMode: "CryptlexV3HostedFloatingPerMachine"
+  # ftcLicenseKey: FTC license key
+  ftcLicenseKey: "123456-C6705B-D20478-6F74CF-E1CA87-6B9B1F"
+
+  # cambriaClusterAPIToken: API token for Cambria Cluster.  Will need to be used for example to submit transcoding jobs via the Cambria Cluster API
+  cambriaClusterAPIToken: "226622-8b85-43f8-b4fc-53afd3893d5f"
+
+  # cambriaClusterWebUIUser: user/password to access Cambria Cluster web UI.  Comma-separate values with type (ie admin), username, and password
+  cambriaClusterWebUIUser: "admin,myuser,12341234"
+
+  # linodeAPIToken: Linode API token, used for horizontal scaling (to add and remove node pools automatically)
+  linodeAPIToken: "not-a-real-token"
+
+optionalInstall:
+  enableEventing: true
