@@ -9,7 +9,7 @@ managerInstanceType: "g6-dedicated-2"
 ftcInstanceType: "g6-dedicated-8"
 
 # maxFTCInstances: maximum number of FTC instances (ie replicas).  Set this to the number of FTCs that are licensed.
-maxFTCInstances: 3
+maxFTCInstances: 5
 
 # pgInstances: number of postgresql database instances (ie replicas)
 pgInstances: 3
