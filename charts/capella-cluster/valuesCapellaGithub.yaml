@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 # managerInstanceType: database and Cambria Cluster will be restricted to run on nodes of this instance type.  FTC will be forbidden to run on these
-managerInstanceType: "g6-dedicated-2"
+managerInstanceType: "t2.medium"
 
 # ftcInstanceType: instance type for the FTC nodes which will be launched dynamically
 ftcInstanceType: "g6-dedicated-8"
