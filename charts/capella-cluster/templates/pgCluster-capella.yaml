@@ -28,14 +28,6 @@ spec:
         name: pgcluster-capella-app-user
   storage:
     size: 10Gi
-    pvcTemplate:
-      accessModes:
-        - ReadWriteOnce
-      resources:
-        requests:
-          storage: 10Gi
-      storageClassName: standard
-      volumeMode: Filesystem
   affinity:
     enablePodAntiAffinity: true
     podAntiAffinityType: required
