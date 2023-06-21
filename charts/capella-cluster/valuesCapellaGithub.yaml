@@ -30,7 +30,7 @@ secrets:
   # ftcLicenseMode: FTC license mode
   ftcLicenseMode: "CryptlexV3HostedFloatingPerMachine"
   # ftcLicenseKey: FTC license key
-  ftcLicenseKey: "123456-C6705B-D20478-6F74CF-E1CA87-6B9B1F"
+  ftcLicenseKey: "27BF29-74B1BA-E5953B-1CB5E8-C7ECC6-BFAF5E"
 
   # cambriaClusterAPIToken: API token for Cambria Cluster.  Will need to be used for example to submit transcoding jobs via the Cambria Cluster API
   cambriaClusterAPIToken: "226622-8b85-43f8-b4fc-53afd3893d5f"
